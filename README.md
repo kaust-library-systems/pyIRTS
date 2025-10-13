@@ -31,6 +31,30 @@ requirements.txt     # Python dependencies
 config.env.template  # Configuration template
 ```
 
+As a tree view
+
+```
+mgarcia@PC-KL-26743:~/Work/pyIRTS$ tree
+.
+├── LICENSE
+├── README.md
+├── config.env.template
+├── core
+│   ├── __init__.py
+│   ├── database.py
+│   ├── mapper.py
+│   └── metadata.py
+├── harvest.py
+├── harvesters
+│   ├── __init__.py
+│   ├── arxiv.py
+│   ├── base.py
+│   └── crossref.py
+└── requirements.txt
+
+3 directories, 13 files
+```
+
 ### Key Concepts
 
 **Version Control**: The system never deletes metadata - it marks old values as deleted and links them to replacement values, maintaining a complete audit trail.
