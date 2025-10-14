@@ -1,6 +1,6 @@
 # pyIRTS - Python IRTS Harvest System
 
-A Python implementation of the IRTS (Institutional Research Tracking System) metadata harvesting system. This system harvests research publication metadata from multiple academic sources and manages it in a standardized Dublin Core format with full version control.
+A Python implementation of the IRTS (Institutional Research Tracking System) metadata harvesting system. This system harvests research publication metadata from multiple academic sources and manages it in a standardized Dublin Core format with full version control using SQLite.
 
 ## Features
 
@@ -92,15 +92,17 @@ mgarcia@PC-KL-26743:~/Work/pyIRTS$ tree
    ```
 
    Update the following settings:
-   - Database credentials (DB_HOST, DB_NAME, DB_USER, DB_PASSWORD)
+   - Database path (DB_PATH, default: irts.sqlite)
    - Institution details (INSTITUTION_ABBREVIATION, INSTITUTION_CITY)
    - Email settings (IR_EMAIL, SMTP_HOST, SMTP_FROM, SMTP_TO)
    - API endpoints (if different from defaults)
 
-5. **Verify database connection**:
+5. **Initialize database** (automatic on first connection):
    ```python
-   python3 -c "from core.database import db; db.connect(); print('Connected!')"
+   python3 -c "from core.database import db; db.connect(); print('Connected! Database initialized.')"
    ```
+
+   The database schema is automatically created from `schema.sql` on first connection.
 
 ## Usage
 
@@ -147,7 +149,7 @@ Add to crontab for automated harvesting:
 
 ## Database Schema
 
-The system uses the existing IRTS database schema:
+The system uses SQLite with the schema defined in `schema.sql`:
 
 ### Main Tables
 
@@ -289,20 +291,15 @@ ARXIV_DELAY=5
 CROSSREF_DELAY=2
 ```
 
-## Comparison with PHP Version
 
-This Python implementation maintains compatibility with the existing PHP IRTS system:
+## Key Features
 
- **Same database schema** - Works with existing IRTS database
- **Same metadata format** - Dublin Core standardization
- **Same version control** - Full audit trail of changes
- **Same deduplication logic** - Prevents duplicate entries
-
-**Improvements**:
-- Type hints for better code clarity
-- Modern Python async/await support potential
-- Better error handling and logging
-- Easier to test and extend
+- **SQLite database** - No database server required, file-based storage
+- **Auto-initialization** - Database schema created automatically from `schema.sql`
+- **Type hints** - Better code clarity and IDE support
+- **Structured logging** - JSON-formatted logs via structlog
+- **Version control** - Full audit trail of all metadata changes
+- **Deduplication** - Intelligent duplicate detection across sources
 
 ## Contributing
 

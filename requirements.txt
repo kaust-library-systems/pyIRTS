@@ -1,9 +1,5 @@
 # IRTS Python Harvest System Dependencies
 
-# Database
-pymysql>=1.1.0
-sqlalchemy>=2.0.0
-
 # HTTP requests
 requests>=2.31.0
 

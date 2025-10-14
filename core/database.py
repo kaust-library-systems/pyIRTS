@@ -4,11 +4,11 @@ Database connection and query utilities for IRTS harvest system.
 
 from typing import Optional, List, Dict, Any, Tuple
 from contextlib import contextmanager
-import pymysql
-from pymysql.cursors import DictCursor
+import sqlite3
 import structlog
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
 load_dotenv('config.env')
 
@@ -19,33 +19,55 @@ class DatabaseConnection:
     """Manages database connections and provides query utilities."""
 
     def __init__(self):
-        self.host = os.getenv('DB_HOST', 'localhost')
-        self.port = int(os.getenv('DB_PORT', '3306'))
-        self.database = os.getenv('DB_NAME', 'irts')
-        self.user = os.getenv('DB_USER')
-        self.password = os.getenv('DB_PASSWORD')
-        self._connection: Optional[pymysql.Connection] = None
+        self.db_path = os.getenv('DB_PATH', 'irts.sqlite')
+        self._connection: Optional[sqlite3.Connection] = None
+        self._initialized = False
 
-    def connect(self) -> pymysql.Connection:
+    def connect(self) -> sqlite3.Connection:
         """Establish database connection."""
-        if self._connection is None or not self._connection.open:
-            self._connection = pymysql.connect(
-                host=self.host,
-                port=self.port,
-                user=self.user,
-                password=self.password,
-                database=self.database,
-                charset='utf8mb4',
-                cursorclass=DictCursor,
-                autocommit=False
+        if self._connection is None:
+            self._connection = sqlite3.connect(
+                self.db_path,
+                check_same_thread=False,
+                timeout=30.0
             )
-            logger.info("database_connected", host=self.host, database=self.database)
+            # Return rows as dictionaries
+            self._connection.row_factory = sqlite3.Row
+            # Enable foreign keys
+            self._connection.execute("PRAGMA foreign_keys = ON")
+            logger.info("database_connected", path=self.db_path)
+
+            # Initialize schema on first connection
+            if not self._initialized:
+                self._initialize_schema()
+                self._initialized = True
+
         return self._connection
+
+    def _initialize_schema(self):
+        """Initialize database schema from schema.sql if tables don't exist."""
+        # Check if tables exist
+        cursor = self._connection.cursor()
+        cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='metadata'"
+        )
+        if cursor.fetchone() is None:
+            logger.info("initializing_database_schema")
+            schema_path = Path(__file__).parent.parent / 'schema.sql'
+            if schema_path.exists():
+                with open(schema_path, 'r') as f:
+                    schema_sql = f.read()
+                self._connection.executescript(schema_sql)
+                self._connection.commit()
+                logger.info("database_schema_initialized")
+            else:
+                logger.warning("schema_file_not_found", path=str(schema_path))
 
     def close(self):
         """Close database connection."""
-        if self._connection and self._connection.open:
+        if self._connection:
             self._connection.close()
+            self._connection = None
             logger.info("database_closed")
 
     @contextmanager
@@ -75,8 +97,8 @@ class DatabaseConnection:
             Number of affected rows
         """
         with self.cursor() as cur:
-            affected = cur.execute(query, params or ())
-            return affected
+            cur.execute(query, params or ())
+            return cur.rowcount
 
     def query(self, query: str, params: Optional[Tuple] = None) -> List[Dict[str, Any]]:
         """
@@ -91,7 +113,8 @@ class DatabaseConnection:
         """
         with self.cursor() as cur:
             cur.execute(query, params or ())
-            return cur.fetchall()
+            # Convert sqlite3.Row objects to dictionaries
+            return [dict(row) for row in cur.fetchall()]
 
     def query_one(self, query: str, params: Optional[Tuple] = None) -> Optional[Dict[str, Any]]:
         """
@@ -118,9 +141,9 @@ class DatabaseConnection:
         Returns:
             Last insert ID
         """
-        columns = ', '.join(f'`{col}`' for col in data.keys())
-        placeholders = ', '.join(['%s'] * len(data))
-        query = f"INSERT INTO `{table}` ({columns}) VALUES ({placeholders})"
+        columns = ', '.join(f'"{col}"' for col in data.keys())
+        placeholders = ', '.join(['?'] * len(data))
+        query = f'INSERT INTO "{table}" ({columns}) VALUES ({placeholders})'
 
         with self.cursor() as cur:
             cur.execute(query, tuple(data.values()))
@@ -138,13 +161,31 @@ class DatabaseConnection:
         Returns:
             Number of affected rows
         """
-        set_clause = ', '.join(f'`{col}` = %s' for col in data.keys())
-        where_clause = ' AND '.join(f'`{col}` = %s' for col in where.keys())
-        query = f"UPDATE `{table}` SET {set_clause} WHERE {where_clause}"
+        set_clause = ', '.join(f'"{col}" = ?' for col in data.keys())
+        where_clause = ' AND '.join(f'"{col}" = ?' for col in where.keys())
+        query = f'UPDATE "{table}" SET {set_clause} WHERE {where_clause}'
 
         params = tuple(data.values()) + tuple(where.values())
         with self.cursor() as cur:
-            return cur.execute(query, params)
+            cur.execute(query, params)
+            return cur.rowcount
+
+    def escape_string(self, value: str) -> str:
+        """
+        Escape a string for SQL (for compatibility with MySQL code).
+
+        Note: This method is provided for compatibility but should not be used.
+        Always use parameterized queries instead.
+
+        Args:
+            value: String to escape
+
+        Returns:
+            Escaped string
+        """
+        # SQLite handles escaping through parameterized queries
+        # This is just for compatibility with existing code
+        return value.replace("'", "''")
 
     def get_values(
         self,
