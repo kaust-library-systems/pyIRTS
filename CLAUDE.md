@@ -16,24 +16,23 @@ source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Test database connection
-python3 -c "from core.database import db; db.connect(); print('Connected!')"
 ```
 
 ### Running Harvests
 ```bash
 # Basic harvest from single source
-python harvest.py --source arxiv
+python harvest.py source
 
 # Harvest from multiple sources
-python harvest.py --source arxiv,crossref
+python harvest.py arxiv,crossref
 
 # Different harvest types
-python harvest.py --source arxiv --type new         # Most recent items only (default)
-python harvest.py --source arxiv --type reprocess   # Reprocess existing metadata
-python harvest.py --source arxiv --type reharvest   # Reharvest known items from source
-python harvest.py --source arxiv --type requery     # Full iteration through source
+python harvest.py arxiv --type new         # Most recent items only (default)
+# Possible implementation of options in the future.
+# Ignore for now.
+python harvest.py arxiv --type reprocess   # Reprocess existing metadata 
+python harvest.py arxiv --type reharvest   # Reharvest known items from source
+python harvest.py arxiv --type requery     # Full iteration through source
 ```
 
 ## Architecture
@@ -46,10 +45,6 @@ python harvest.py --source arxiv --type requery     # Full iteration through sou
 - Maintains complete audit trail of all changes
 
 **Field Mapping Strategy**: Source-specific field names are mapped to Dublin Core standards using the `mappings` database table. The system caches these mappings in memory for performance.
-
-**Harvester Pattern**: All harvesters inherit from `BaseHarvester` (harvesters/base.py) and implement:
-- `harvest(harvest_type)`: Main orchestration method
-- `process_record(item)`: Process individual record from source
 
 ### Module Structure
 
