@@ -6,6 +6,9 @@ requests>=2.31.0
 # XML/JSON parsing
 lxml>=4.9.0
 
+# Fixing bug(?) in pylance: "etree" is unknown import symbol (lxml)#392
+lxml-stubs>=0.5.1
+
 # Configuration
 python-dotenv>=1.0.0
 
@@ -14,3 +17,6 @@ structlog>=23.1.0
 
 # Type hints
 typing-extensions>=4.8.0
+
+# Command Line Tool
+typer
