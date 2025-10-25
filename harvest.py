@@ -4,6 +4,7 @@
 
 import typer
 import requests
+from configparser import ConfigParser,ExtendedInterpolation
 
 class arxiv:
     def __init__(self, URL: str, queryItem: str):
@@ -18,6 +19,10 @@ class arxiv:
         
 def main(source: str):
     
+    config_file='irts.cfg'
+    config = ConfigParser(interpolation=ExtendedInterpolation())
+    config.read(config_file)
+
     print(f"Source: {source}")
 
 if __name__ == "__main__":
